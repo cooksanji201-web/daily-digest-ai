@@ -321,7 +321,7 @@ serve(async (req) => {
                         content: fullContent.substring(0, 10000), // Limit content size
                         content_hash: contentHash,
                         embedding,
-                        published_date: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
+                        published_date: (item.pubDate && !isNaN(Date.parse(item.pubDate))) ? new Date(item.pubDate).toISOString() : new Date().toISOString()
                     })
 
                 if (insertError) {
