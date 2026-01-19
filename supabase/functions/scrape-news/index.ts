@@ -39,12 +39,12 @@ function parseRSSFeed(xmlText: string): FeedItem[] {
     const items: FeedItem[] = []
 
     // Try RSS format first
-    const rssItems = xmlText.match(/<item>[\s\S]*?<\/item>/g) || []
+    const rssItems = xmlText.match(/<item>[\s\S]*?<\/item>/gi) || []
     for (const item of rssItems) {
-        const title = item.match(/<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/)?.[1]?.trim() || ''
-        const link = item.match(/<link>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/link>/)?.[1]?.trim() || ''
-        const description = item.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/)?.[1]?.trim() || ''
-        const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim()
+        const title = item.match(/<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/i)?.[1]?.trim() || ''
+        const link = item.match(/<link>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/link>/i)?.[1]?.trim() || ''
+        const description = item.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i)?.[1]?.trim() || ''
+        const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/i)?.[1]?.trim()
 
         if (title && link) {
             items.push({
@@ -58,7 +58,7 @@ function parseRSSFeed(xmlText: string): FeedItem[] {
 
     // Try Atom format if no RSS items found
     if (items.length === 0) {
-        const atomEntries = xmlText.match(/<entry>[\s\S]*?<\/entry>/g) || []
+        const atomEntries = xmlText.match(/<entry>[\s\S]*?<\/entry>/gi) || []
         for (const entry of atomEntries) {
             const title = entry.match(/<title[^>]*>(.*?)<\/title>/)?.[1]?.trim() || ''
             const link = entry.match(/<link[^>]*href="([^"]*)"[^>]*>/)?.[1] ||

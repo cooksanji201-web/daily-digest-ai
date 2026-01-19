@@ -27,7 +27,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{"maxItemsPerSource": 5, "enableFirecrawl": true}' \
-            --fail
+            -d '{"maxItemsPerSource": 5, "enableFirecrawl": true}'
 
       - name: Trigger Generate Digest (Daily at 7AM VN)
         # Run if schedule is 00:00 UTC OR manual trigger
@@ -37,4 +37,4 @@ jobs:
           curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/generate-digest" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json" \
-            --fail
+            -H "Content-Type: application/json"
