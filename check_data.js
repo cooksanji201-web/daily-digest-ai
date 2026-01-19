@@ -15,30 +15,35 @@ envContent.split('\n').forEach(line => {
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
 
 async function main() {
-    console.log("Checking Data Distribution...");
+    console.log("Checking Data Integrity...");
 
-    // 1. Get All Sources
-    const { data: sources, error: sErr } = await supabase.from('sources').select('id, name');
-    if (sErr) return console.error("Error fetching sources:", sErr);
+    // 1. Check if 'image_url' exists by selecting it from one row
+    const { data: checkImg, error: imgErr } = await supabase.from('raw_news').select('image_url').limit(1);
 
-    console.log(`\nFound ${sources.length} sources.`);
+    if (imgErr) {
+        console.error("❌ 'image_url' column missing or error:", imgErr.message);
+    } else {
+        console.log("✅ 'image_url' column exists.");
+    }
 
-    // 2. Count News per Source
-    const { data: news, error: nErr } = await supabase.from('raw_news').select('id, source_id, title');
+    // 2. Count Articles by Source
+    const { data: news, error: nErr } = await supabase.from('raw_news').select('id, source_id, title, image_url');
     if (nErr) return console.error("Error fetching news:", nErr);
 
-    console.log(`Found ${news.length} articles total.`);
+    const { data: sources } = await supabase.from('sources').select('id, name');
 
     const counts = {};
-    sources.forEach(s => counts[s.name] = 0);
+    let withImage = 0;
 
     news.forEach(n => {
-        const source = sources.find(s => s.id === n.source_id);
-        if (source) counts[source.name] = (counts[source.name] || 0) + 1;
-        else counts['Unknown'] = (counts['Unknown'] || 0) + 1;
+        const sName = sources.find(s => s.id === n.source_id)?.name || 'Unknown';
+        counts[sName] = (counts[sName] || 0) + 1;
+        if (n.image_url) withImage++;
     });
 
     console.table(counts);
+    console.log(`\nTotal Articles: ${news.length}`);
+    console.log(`Articles with Image: ${withImage}`);
 }
 
 main();
