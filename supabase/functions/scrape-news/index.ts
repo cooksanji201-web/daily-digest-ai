@@ -16,6 +16,7 @@ interface FeedItem {
     link: string
     description: string
     pubDate?: string
+    image?: string
 }
 
 interface ScrapeResult {
@@ -46,12 +47,18 @@ function parseRSSFeed(xmlText: string): FeedItem[] {
         const description = item.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i)?.[1]?.trim() || ''
         const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/i)?.[1]?.trim()
 
+        // Extract Image: custom regex for enclosure, media:content, or img tag in description
+        let image = item.match(/<enclosure[^>]*url="([^"]*)"[^>]*>/i)?.[1] ||
+            item.match(/<media:content[^>]*url="([^"]*)"[^>]*>/i)?.[1] ||
+            description.match(/<img[^>]+src="([^">]+)"/i)?.[1];
+
         if (title && link) {
             items.push({
                 title: title.replace(/<[^>]*>/g, ''), // Strip any HTML
                 link,
                 description: description.replace(/<[^>]*>/g, '').substring(0, 500),
-                pubDate
+                pubDate,
+                image
             })
         }
     }
@@ -321,7 +328,8 @@ serve(async (req) => {
                         content: fullContent.substring(0, 10000), // Limit content size
                         content_hash: contentHash,
                         embedding,
-                        published_date: (item.pubDate && !isNaN(Date.parse(item.pubDate))) ? new Date(item.pubDate).toISOString() : new Date().toISOString()
+                        published_date: (item.pubDate && !isNaN(Date.parse(item.pubDate))) ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+                        image_url: item.image || null
                     })
 
                 if (insertError) {
