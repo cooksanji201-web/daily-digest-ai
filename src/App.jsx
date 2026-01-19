@@ -2,12 +2,28 @@ import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabaseClient';
 import AudioPlayer from './components/AudioPlayer';
 import NewsFeed from './components/NewsFeed';
-import { Sparkles, Radio } from 'lucide-react';
+import { Sparkles, Radio, LayoutDashboard, Globe, Rss } from 'lucide-react';
 
 function App() {
   const [digest, setDigest] = useState(null);
   const [news, setNews] = useState([]);
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'vietnam', 'global'
   const [loading, setLoading] = useState(true);
+
+  // Derive specialized lists
+  // NOTE: Simple filtering logic based on source name or detection. 
+  // In a real app, this should be a DB column.
+  const vnKeywords = ['vnexpress', 'tuoi tre', 'thanh nien', 'tinhte', 'genk', 'znews'];
+
+  const vnNews = news.filter(n => {
+    const source = n.sources?.name?.toLowerCase() || '';
+    const url = n.url?.toLowerCase() || '';
+    return url.includes('.vn') || vnKeywords.some(k => source.includes(k));
+  });
+
+  const globalNews = news.filter(n => !vnNews.includes(n));
+
+  const displayNews = activeTab === 'all' ? news : activeTab === 'vietnam' ? vnNews : globalNews;
 
   useEffect(() => {
     async function fetchData() {
@@ -22,20 +38,16 @@ function App() {
           .limit(1)
           .single();
 
-        if (digestData) {
-          setDigest(digestData);
-        }
+        if (digestData) setDigest(digestData);
 
-        // 2. Fetch Latest News (raw_news + sources)
+        // 2. Fetch Latest News
         const { data: newsData } = await supabase
           .from('raw_news')
           .select('*, sources(name)')
           .order('created_at', { ascending: false })
-          .limit(20);
+          .limit(50); // Increased limit for better filtering
 
-        if (newsData) {
-          setNews(newsData);
-        }
+        if (newsData) setNews(newsData);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -47,10 +59,10 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#030712] text-gray-100 font-sans selection:bg-purple-500/30 selection:text-purple-200 pb-20">
+    <div className="min-h-screen bg-[#030712] text-gray-100 font-sans selection:bg-purple-500/30 selection:text-purple-200 pb-32">
 
-      {/* Navbar / Header */}
-      <nav className="border-b border-white/5 bg-black/20 backdrop-blur-xl sticky top-0 z-50">
+      {/* Navbar - Fixed Glass */}
+      <nav className="fixed top-0 w-full border-b border-white/5 bg-black/40 backdrop-blur-xl z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
@@ -60,50 +72,94 @@ function App() {
               Daily<span className="text-blue-400">Digest</span>.ai
             </span>
           </div>
-          <div className="text-xs font-mono text-gray-500 hidden sm:block border border-white/10 rounded-full px-3 py-1">
-            v1.0.0 • Beta
+
+          <div className="hidden md:flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/5">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === 'all' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'text-gray-400 hover:text-white'}`}
+            >
+              Mixed
+            </button>
+            <button
+              onClick={() => setActiveTab('vietnam')}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === 'vietnam' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'text-gray-400 hover:text-white'}`}
+            >
+              Vietnam
+            </button>
+            <button
+              onClick={() => setActiveTab('global')}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === 'global' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'text-gray-400 hover:text-white'}`}
+            >
+              Global
+            </button>
           </div>
+
+          <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10" />
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 pt-12">
+      <main className="max-w-7xl mx-auto px-6 pt-24">
 
-        {/* Hero Section (Audio Player) */}
-        {loading ? (
-          <div className="h-64 glass-panel rounded-3xl animate-pulse flex items-center justify-center">
-            <p className="text-gray-500">Loading your digest...</p>
+        {/* Dashboard Header */}
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-400 mb-2">
+              Morning Briefing
+            </h1>
+            <p className="text-slate-400">Here's what happened in the world of AI today.</p>
           </div>
-        ) : digest ? (
-          <AudioPlayer
-            audioUrl={digest.audio_url}
-            title="Your Daily Tech Briefing"
-            date={new Date(digest.digest_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          />
-        ) : (
-          <div className="h-48 glass-panel rounded-3xl flex flex-col items-center justify-center text-gray-400 mb-12 border-dashed border-2 border-white/10">
-            <Sparkles size={48} className="mb-4 text-gray-600" />
-            <p>No digest generated for today yet.</p>
-            <p className="text-xs mt-2 text-gray-600">Waiting for scheduled generation...</p>
+          {/* Mobile Tab View (visible only on small screens) */}
+          <div className="md:hidden">
+            <select
+              className="bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+            >
+              <option value="all">Mixed View</option>
+              <option value="vietnam">Vietnam News</option>
+              <option value="global">Global News</option>
+            </select>
           </div>
-        )}
-
-        {/* Latest News Feed */}
-        <div className="flex items-center gap-3 mb-8 mt-16">
-          <div className="h-8 w-1 bg-blue-500 rounded-full" />
-          <h2 className="text-2xl font-bold">Latest Incoming News</h2>
         </div>
 
+        {/* Content Area */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3, 4, 5, 6].map(i => (
               <div key={i} className="h-64 glass-card rounded-2xl animate-pulse bg-white/5" />
             ))}
           </div>
         ) : (
-          <NewsFeed articles={news} />
+          <div className="space-y-12">
+            {/* News Grid */}
+            <NewsFeed articles={displayNews} />
+          </div>
         )}
 
       </main>
+
+      {/* Fixed Player Bar */}
+      <div className="fixed bottom-0 left-0 w-full border-t border-white/10 bg-black/60 backdrop-blur-2xl z-40 pb-safe">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          {digest ? (
+            <div className="flex items-center gap-4">
+              {/* Minimized Player UI - reusing AudioPlayer logic but can be simplified */}
+              <div className="flex-1">
+                <AudioPlayer
+                  audioUrl={digest.audio_url}
+                  title="Latest Digest"
+                  date={new Date(digest.digest_date).toLocaleDateString()}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-sm text-gray-500 py-2">
+              Waiting for next digest generation...
+            </div>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
