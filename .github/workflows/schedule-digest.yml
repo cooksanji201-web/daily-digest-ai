@@ -1,0 +1,40 @@
+name: Daily Digest Automation
+
+on:
+  schedule:
+    # 1. Scrape News: Every 2 hours (0:00, 2:00, 4:00, ...)
+    # Uses cron syntax: minute hour day month day_of_week
+    - cron: "0 */2 * * *"
+
+    # 2. Generate Digest: 00:00 UTC (7:00 AM Vietnam Time)
+    - cron: "0 0 * * *"
+
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  automate:
+    name: Automate Daily Digest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Scrape News (Every 2 Hours)
+        # Run if schedule matches 2-hourly OR manual trigger
+        if: github.event.schedule != '0 0 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "🚀 Triggering Scrape News..."
+          curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/scrape-news" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"maxItemsPerSource": 5, "enableFirecrawl": true}' \
+            --fail
+
+      - name: Trigger Generate Digest (Daily at 7AM VN)
+        # Run if schedule is 00:00 UTC OR manual trigger
+        if: github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "🎙️ Triggering Daily Digest Generation..."
+          curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/generate-digest" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            --fail
