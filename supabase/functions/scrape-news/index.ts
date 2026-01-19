@@ -50,7 +50,20 @@ function parseRSSFeed(xmlText: string): FeedItem[] {
         // Extract Image: custom regex for enclosure, media:content, or img tag in description
         let image = item.match(/<enclosure[^>]*url="([^"]*)"[^>]*>/i)?.[1] ||
             item.match(/<media:content[^>]*url="([^"]*)"[^>]*>/i)?.[1] ||
-            description.match(/<img[^>]+src="([^">]+)"/i)?.[1];
+            item.match(/<img[^>]+src="([^">]+)"/i)?.[1];
+
+        // Fallback: Check inside description (decoding entities if needed)
+        if (!image) {
+            let desc = item.match(/<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/description>/si)?.[1] || '';
+            // Simple entity decode for common HTML entities
+            desc = desc.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+            image = desc.match(/src="([^"]+)"/i)?.[1];
+        }
+
+        // Fallback 2: Search for ANY jpg/png url in the whole item string (Aggressive)
+        if (!image) {
+            image = item.match(/https?:\/\/[^\s"']+\.(?:jpg|png|jpeg|webp)/i)?.[0];
+        }
 
         if (title && link) {
             items.push({
